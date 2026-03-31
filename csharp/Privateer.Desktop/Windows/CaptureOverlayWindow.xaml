@@ -1,0 +1,116 @@
+<Window x:Class="Privateer.Desktop.Windows.CaptureOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        PreviewKeyDown="CaptureOverlayWindow_PreviewKeyDown"
+        Cursor="Cross">
+    <Grid x:Name="OverlayRoot"
+          Background="Transparent"
+          MouseLeftButtonDown="OverlayRoot_MouseLeftButtonDown"
+          MouseMove="OverlayRoot_MouseMove"
+          MouseLeftButtonUp="OverlayRoot_MouseLeftButtonUp"
+          KeyDown="OverlayRoot_KeyDown">
+        <Image x:Name="DimmedBackgroundImage"
+               Stretch="Fill"
+               Opacity="1" />
+
+        <Canvas IsHitTestVisible="False">
+            <Border x:Name="SelectionBorder"
+                    Visibility="Collapsed"
+                    BorderThickness="2"
+                    BorderBrush="#FF39FF14"
+                    Background="#1039FF14"
+                    CornerRadius="0" />
+
+            <Border x:Name="SelectionInfoPill"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"
+                    Background="#E61D2435"
+                    CornerRadius="16"
+                    Padding="12,8">
+                <TextBlock x:Name="SelectionInfoTextBlock"
+                           Foreground="White"
+                           FontFamily="{DynamicResource AppFontFamily}"
+                           FontSize="14" />
+            </Border>
+
+            <Line x:Name="CrosshairHorizontal"
+                  IsHitTestVisible="False"
+                  Stroke="#FF68FFF5"
+                  StrokeThickness="1"
+                  StrokeDashArray="2,2"
+                  Opacity="0.95" />
+            <Line x:Name="CrosshairVertical"
+                  IsHitTestVisible="False"
+                  Stroke="#FF68FFF5"
+                  StrokeThickness="1"
+                  StrokeDashArray="2,2"
+                  Opacity="0.95" />
+
+            <Grid x:Name="MagnifierHost"
+                  Width="192"
+                  Height="192"
+                  IsHitTestVisible="False"
+                  Visibility="Collapsed">
+                <Grid.Clip>
+                    <EllipseGeometry Center="96,96" RadiusX="96" RadiusY="96" />
+                </Grid.Clip>
+
+                <Ellipse Fill="#F2080B10" />
+
+                <Image x:Name="MagnifierImage"
+                       Stretch="Fill"
+                       RenderOptions.BitmapScalingMode="NearestNeighbor" />
+
+                <Line X1="0"
+                      Y1="96"
+                      X2="192"
+                      Y2="96"
+                      Stroke="White"
+                      StrokeThickness="1.5"
+                      Opacity="0.95" />
+                <Line X1="96"
+                      Y1="0"
+                      X2="96"
+                      Y2="192"
+                      Stroke="White"
+                      StrokeThickness="1.5"
+                      Opacity="0.95" />
+
+                <Ellipse Stroke="White"
+                         StrokeThickness="3"
+                         Fill="Transparent" />
+            </Grid>
+
+            <Border x:Name="MagnifierLabel"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False"
+                    Background="#E639FF14"
+                    BorderBrush="#FF9BFF86"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="8,4">
+                <TextBlock x:Name="MagnifierLabelTextBlock"
+                           Foreground="#FF031006"
+                           FontFamily="{DynamicResource AppFontFamily}"
+                           FontSize="12" />
+            </Border>
+        </Canvas>
+
+        <Border HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,26"
+                Background="#C910172A"
+                CornerRadius="18"
+                Padding="18,10">
+            <TextBlock Foreground="White"
+                       FontSize="13"
+                       Text="Drag to select a region. Release to capture. Press Esc to cancel capture." />
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,68 @@
+<Window x:Class="Privateer.Desktop.Windows.QuickActionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Capture Ready"
+        Icon="/Assets/PrivateerAppIcon.ico"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
+        Width="720"
+        Height="560"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="24"
+          Background="{DynamicResource WindowBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="18" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="18" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Style="{DynamicResource SectionHeadingStyle}" Text="Capture Ready" />
+            <TextBlock Margin="0,8,0,0"
+                       Style="{DynamicResource CaptionStyle}"
+                       Text="Choose what happens next. Save uses your default location and filename pattern immediately." />
+        </StackPanel>
+
+        <Border Grid.Row="2"
+                Style="{DynamicResource CardStyle}"
+                Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Image x:Name="PreviewImage"
+                       Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="Fant" />
+
+                <TextBlock Grid.Row="1"
+                           x:Name="PathPreviewTextBlock"
+                           Margin="0,16,0,0"
+                           TextWrapping="Wrap"
+                           Style="{DynamicResource CaptionStyle}" />
+            </Grid>
+        </Border>
+
+        <WrapPanel Grid.Row="4"
+                   HorizontalAlignment="Right">
+            <Button Margin="0,0,12,0"
+                    Style="{DynamicResource GhostButtonStyle}"
+                    Content="Copy"
+                    Click="CopyButton_Click" />
+            <Button Margin="0,0,12,0"
+                    Style="{DynamicResource GhostButtonStyle}"
+                    Content="Open Editor"
+                    Click="OpenEditorButton_Click" />
+            <Button Margin="0,0,12,0"
+                    Style="{DynamicResource GhostButtonStyle}"
+                    Content="Save As"
+                    Click="SaveAsButton_Click" />
+            <Button Content="Save"
+                    Click="SaveButton_Click" />
+        </WrapPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFF2E7D5" />
+    <SolidColorBrush x:Key="WindowGlassBrush" Color="#F7F7ECDD" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FAFBF2E5" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#3A6E5843" />
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FF3F2E1F" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#FF6A5643" />
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#FF87725E" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#FFD6A85A" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#FFE2B970" />
+    <SolidColorBrush x:Key="AccentMutedBrush" Color="#23D6A85A" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#FF2A1C0C" />
+    <SolidColorBrush x:Key="PreviewGridBrush" Color="#FFE3D4BF" />
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FFF8F0E4" />
+    <SolidColorBrush x:Key="InputBorderBrush" Color="#4A7D674F" />
+    <SolidColorBrush x:Key="GhostButtonBrush" Color="#F2F5EBDD" />
+    <SolidColorBrush x:Key="GhostButtonBorderBrush" Color="#38705A45" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="#FF16A34A" />
+</ResourceDictionary>

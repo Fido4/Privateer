@@ -1,0 +1,305 @@
+<Window x:Class="Privateer.Desktop.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Privateer"
+        Icon="/Assets/PrivateerAppIcon.ico"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
+        Width="1210"
+        Height="840"
+        MinWidth="1180"
+        MinHeight="840"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="28"
+          Background="{DynamicResource WindowBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="24" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{DynamicResource AccentMutedBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="32"
+                Padding="28">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border Width="96"
+                        Height="96"
+                        VerticalAlignment="Top"
+                        Background="#CC000000"
+                        BorderBrush="#40FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="24"
+                        Padding="0">
+                    <Grid Width="91"
+                          Height="91"
+                          Margin="2,2,3,3"
+                          ClipToBounds="True">
+                        <Grid.Clip>
+                            <RectangleGeometry Rect="0,0,91,91"
+                                               RadiusX="21.5"
+                                               RadiusY="21.5" />
+                        </Grid.Clip>
+                        <Image Source="/Assets/PrivateerMark.png"
+                               Stretch="Uniform"
+                               RenderTransformOrigin="0.5,0.5"
+                               RenderOptions.BitmapScalingMode="Fant">
+                            <Image.RenderTransform>
+                                <ScaleTransform ScaleX="1.42"
+                                                ScaleY="1.42" />
+                            </Image.RenderTransform>
+                        </Image>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="2"
+                            HorizontalAlignment="Left">
+                    <TextBlock Style="{DynamicResource TitleTextStyle}" Text="Privateer" />
+                    <TextBlock Margin="0,10,0,0"
+                               MaxWidth="760"
+                               FontSize="16"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               TextWrapping="Wrap"
+                               Text="Capture a precise region, save instantly with your preferred folder and filename, copy it, or open it in the editor without extra friction." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="4"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Width="260">
+                    <TextBlock Style="{DynamicResource CaptionStyle}" Text="Theme" />
+                    <ComboBox x:Name="ThemeComboBox"
+                              Margin="0,8,0,0"
+                              SelectionChanged="ThemeComboBox_SelectionChanged">
+                        <ComboBoxItem Content="System" Tag="System" />
+                        <ComboBoxItem Content="Light" Tag="Light" />
+                        <ComboBoxItem Content="Dark" Tag="Dark" />
+                        <ComboBoxItem Content="Tan Sepia" Tag="TanSepia" />
+                        <ComboBoxItem Content="Brown Sepia" Tag="BrownSepia" />
+                        <ComboBoxItem Content="Green Sepia" Tag="GreenSepia" />
+                    </ComboBox>
+                    <Button Margin="0,18,0,0"
+                            Content="Capture Region"
+                            Click="CaptureButton_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.35*" />
+                <ColumnDefinition Width="20" />
+                <ColumnDefinition Width="0.95*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{DynamicResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="18" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="18" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Style="{DynamicResource SectionHeadingStyle}" Text="Latest Capture" />
+                        <TextBlock Margin="0,8,0,0"
+                                   Style="{DynamicResource CaptionStyle}"
+                                   Text="The last region you grabbed stays ready for Save, Save As, Copy, or opening in the editor." />
+                    </StackPanel>
+
+                    <Border Grid.Row="2"
+                            Background="{DynamicResource WindowGlassBrush}"
+                            BorderBrush="{DynamicResource CardBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="24"
+                            Padding="18">
+                        <Grid>
+                            <Grid x:Name="PreviewPlaceholderPanel">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="1"
+                                        HorizontalAlignment="Center"
+                                        Padding="28,20"
+                                        Background="{DynamicResource GhostButtonBrush}"
+                                        BorderBrush="{DynamicResource GhostButtonBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="20">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock HorizontalAlignment="Center"
+                                                   FontFamily="{DynamicResource AppFontFamily}"
+                                                   FontSize="22"
+                                                   FontWeight="Bold"
+                                                   Text="No capture yet" />
+                                        <TextBlock Margin="0,8,0,0"
+                                                   HorizontalAlignment="Center"
+                                                   Style="{DynamicResource CaptionStyle}"
+                                                   Text="Start with Capture Region to grab a Greenshot-style selection." />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <Image x:Name="PreviewImage"
+                                   Visibility="Collapsed"
+                                   Stretch="Uniform"
+                                   RenderOptions.BitmapScalingMode="Fant" />
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock x:Name="CaptureSummaryTextBlock"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Text="Waiting for a capture" />
+                            <TextBlock x:Name="CaptureDetailsTextBlock"
+                                       Margin="0,6,0,0"
+                                       Style="{DynamicResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Select a region to preview it here." />
+                        </StackPanel>
+
+                        <WrapPanel Grid.Column="2" Orientation="Horizontal">
+                            <Button x:Name="SaveButton"
+                                    Margin="0,0,12,0"
+                                    Content="Save"
+                                    Click="SaveButton_Click" />
+                            <Button x:Name="SaveAsButton"
+                                    Margin="0,0,12,0"
+                                    Style="{DynamicResource GhostButtonStyle}"
+                                    Content="Save As"
+                                    Click="SaveAsButton_Click" />
+                            <Button x:Name="CopyButton"
+                                    Margin="0,0,12,0"
+                                    Style="{DynamicResource GhostButtonStyle}"
+                                    Content="Copy"
+                                    Click="CopyButton_Click" />
+                            <Button x:Name="OpenEditorButton"
+                                    Style="{DynamicResource GhostButtonStyle}"
+                                    Content="Open Editor"
+                                    Click="OpenEditorButton_Click" />
+                        </WrapPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Style="{DynamicResource CardStyle}"
+                    Padding="20">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="14" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Style="{DynamicResource SectionHeadingStyle}" Text="Save Preferences" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Style="{DynamicResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Choose a preferred folder and base filename. Normal Save uses those defaults and appends a timestamp automatically." />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2">
+                            <TextBlock Style="{DynamicResource CaptionStyle}" Text="Preferred folder" />
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="SaveFolderTextBox" TextChanged="PreferencesInputChanged" />
+                                <Button Grid.Column="2"
+                                        Style="{DynamicResource GhostButtonStyle}"
+                                        Content="Browse"
+                                        Click="BrowseFolderButton_Click" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="4">
+                            <TextBlock Style="{DynamicResource CaptionStyle}" Text="Preferred filename" />
+                            <TextBox x:Name="FileNamePrefixTextBox"
+                                     Margin="0,8,0,0"
+                                     TextChanged="PreferencesInputChanged" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="6"
+                                   x:Name="SavePreviewTextBlock"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" />
+
+                        <StackPanel Grid.Row="8">
+                            <TextBlock Style="{DynamicResource CaptionStyle}" Text="Capture hotkey" />
+                            <ComboBox x:Name="CaptureHotkeyComboBox"
+                                      Margin="0,8,0,0"
+                                      SelectionChanged="CaptureHotkeyComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Print Screen" Tag="PrintScreen" />
+                                <ComboBoxItem Content="Custom" Tag="Custom" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="10"
+                                    x:Name="CustomCaptureHotkeyPanel">
+                            <TextBlock Style="{DynamicResource CaptionStyle}" Text="Custom hotkey" />
+                            <TextBox x:Name="CustomCaptureHotkeyTextBox"
+                                     Margin="0,8,0,0"
+                                     IsReadOnly="True"
+                                     PreviewKeyDown="CustomCaptureHotkeyTextBox_PreviewKeyDown"
+                                     Text="Click here and press a key combination" />
+                        </StackPanel>
+
+                        <CheckBox Grid.Row="12"
+                                  x:Name="LaunchOnStartupCheckBox"
+                                  Content="Launch Privateer on Windows startup" />
+
+                        <CheckBox Grid.Row="14"
+                                  x:Name="QuickActionsCheckBox"
+                                  Content="Show quick actions right after every capture"
+                                  Checked="QuickActionsCheckBox_Changed"
+                                  Unchecked="QuickActionsCheckBox_Changed" />
+
+                        <Button Grid.Row="16"
+                                Margin="0,14,0,0"
+                                Content="Save Preferences"
+                                Click="SavePreferencesButton_Click" />
+                    </Grid>
+                </Border>
+        </Grid>
+    </Grid>
+</Window>

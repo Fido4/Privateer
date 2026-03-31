@@ -1,0 +1,591 @@
+<Window x:Class="Privateer.Desktop.Windows.EditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Privateer Editor"
+        Icon="/Assets/PrivateerAppIcon.ico"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
+        Width="1280"
+        Height="890"
+        MinWidth="1120"
+        MinHeight="780"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <Style x:Key="CompactEditorCardStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource CardStyle}">
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="CornerRadius" Value="18" />
+        </Style>
+
+        <Style x:Key="CompactToolButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource GhostButtonStyle}">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style x:Key="CompactColorChipStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid x:Name="ChipHost">
+                            <Ellipse x:Name="ChipBorder"
+                                     Fill="{DynamicResource CardBackgroundBrush}"
+                                     Stroke="{TemplateBinding BorderBrush}"
+                                     StrokeThickness="{TemplateBinding BorderThickness}" />
+
+                            <Ellipse x:Name="ChipFill"
+                                     Margin="3"
+                                     Fill="{TemplateBinding Background}"
+                                     StrokeThickness="0" />
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ChipHost" Property="Opacity" Value="0.92" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ChipHost" Property="Opacity" Value="0.82" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ChipBorder" Property="Opacity" Value="0.45" />
+                                <Setter TargetName="ChipFill" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CompactHeaderGhostButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource GhostButtonStyle}">
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style x:Key="CompactHeaderAccentButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style x:Key="ModernHorizontalScrollThumbStyle"
+               TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="MinWidth" Value="42" />
+            <Setter Property="Background" Value="#FFD7D7D7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Height="8"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                VerticalAlignment="Stretch"
+                                Opacity="0.96" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernVerticalScrollThumbStyle"
+               TargetType="Thumb">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="MinHeight" Value="42" />
+            <Setter Property="Background" Value="#FFD7D7D7" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Width="8"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                HorizontalAlignment="Stretch"
+                                Opacity="0.96" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ThumbBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernScrollBarTrackButtonStyle"
+               TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernScrollBarLineButtonStyle"
+               TargetType="RepeatButton">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Opacity="0.7" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.3" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <ControlTemplate x:Key="ModernScrollLeftButtonTemplate"
+                         TargetType="RepeatButton">
+            <Path Data="M 1.5 4.0 Q 1.0 3.5 1.5 3.0 L 5.7 0.8 Q 6.9 0.2 6.9 1.5 L 6.9 5.5 Q 6.9 6.8 5.7 6.2 Z"
+                  Width="8"
+                  Height="8"
+                  Stretch="None"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Fill="#FF7E7E7E" />
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ModernScrollRightButtonTemplate"
+                         TargetType="RepeatButton">
+            <Path Data="M 6.5 4.0 Q 7.0 3.5 6.5 3.0 L 2.3 0.8 Q 1.1 0.2 1.1 1.5 L 1.1 5.5 Q 1.1 6.8 2.3 6.2 Z"
+                  Width="8"
+                  Height="8"
+                  Stretch="None"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Fill="#FF7E7E7E" />
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ModernScrollUpButtonTemplate"
+                         TargetType="RepeatButton">
+            <Path Data="M 4.0 1.5 Q 3.5 1.0 3.0 1.5 L 0.8 5.7 Q 0.2 6.9 1.5 6.9 L 5.5 6.9 Q 6.8 6.9 6.2 5.7 Z"
+                  Width="8"
+                  Height="8"
+                  Stretch="None"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Fill="#FF7E7E7E" />
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ModernScrollDownButtonTemplate"
+                         TargetType="RepeatButton">
+            <Path Data="M 4.0 6.5 Q 3.5 7.0 3.0 6.5 L 0.8 2.3 Q 0.2 1.1 1.5 1.1 L 5.5 1.1 Q 6.8 1.1 6.2 2.3 Z"
+                  Width="8"
+                  Height="8"
+                  Stretch="None"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Fill="#FF7E7E7E" />
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ModernHorizontalScrollBarTemplate"
+                         TargetType="ScrollBar">
+            <Grid Height="8"
+                  Background="Transparent"
+                  VerticalAlignment="Bottom">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                </Grid.ColumnDefinitions>
+
+                <RepeatButton Grid.Column="0"
+                              Command="ScrollBar.LineLeftCommand"
+                              Style="{StaticResource ModernScrollBarLineButtonStyle}"
+                              Template="{StaticResource ModernScrollLeftButtonTemplate}" />
+
+                <Grid Grid.Column="1"
+                      Margin="2,0">
+                    <Border Height="8"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            VerticalAlignment="Stretch"
+                            Opacity="1" />
+                    <Track x:Name="PART_Track"
+                           Margin="0"
+                           IsDirectionReversed="False">
+                        <Track.DecreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource ModernScrollBarTrackButtonStyle}"
+                                          Command="ScrollBar.PageLeftCommand" />
+                        </Track.DecreaseRepeatButton>
+                        <Track.Thumb>
+                            <Thumb Style="{StaticResource ModernHorizontalScrollThumbStyle}" />
+                        </Track.Thumb>
+                        <Track.IncreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource ModernScrollBarTrackButtonStyle}"
+                                          Command="ScrollBar.PageRightCommand" />
+                        </Track.IncreaseRepeatButton>
+                    </Track>
+                </Grid>
+
+                <RepeatButton Grid.Column="2"
+                              Command="ScrollBar.LineRightCommand"
+                              Style="{StaticResource ModernScrollBarLineButtonStyle}"
+                              Template="{StaticResource ModernScrollRightButtonTemplate}" />
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ModernVerticalScrollBarTemplate"
+                         TargetType="ScrollBar">
+            <Grid Width="8"
+                  Background="Transparent"
+                  HorizontalAlignment="Right">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="8" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="8" />
+                </Grid.RowDefinitions>
+
+                <RepeatButton Grid.Row="0"
+                              Command="ScrollBar.LineUpCommand"
+                              Style="{StaticResource ModernScrollBarLineButtonStyle}"
+                              Template="{StaticResource ModernScrollUpButtonTemplate}" />
+
+                <Grid Grid.Row="1"
+                      Margin="0,2">
+                    <Border Width="8"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4"
+                            HorizontalAlignment="Stretch"
+                            Opacity="1" />
+                    <Track x:Name="PART_Track"
+                           Margin="0"
+                           IsDirectionReversed="True">
+                        <Track.DecreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource ModernScrollBarTrackButtonStyle}"
+                                          Command="ScrollBar.PageUpCommand" />
+                        </Track.DecreaseRepeatButton>
+                        <Track.Thumb>
+                            <Thumb Style="{StaticResource ModernVerticalScrollThumbStyle}" />
+                        </Track.Thumb>
+                        <Track.IncreaseRepeatButton>
+                            <RepeatButton Style="{StaticResource ModernScrollBarTrackButtonStyle}"
+                                          Command="ScrollBar.PageDownCommand" />
+                        </Track.IncreaseRepeatButton>
+                    </Track>
+                </Grid>
+
+                <RepeatButton Grid.Row="2"
+                              Command="ScrollBar.LineDownCommand"
+                              Style="{StaticResource ModernScrollBarLineButtonStyle}"
+                              Template="{StaticResource ModernScrollDownButtonTemplate}" />
+            </Grid>
+        </ControlTemplate>
+
+        <Style x:Key="ModernScrollBarStyle"
+               TargetType="ScrollBar">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Template" Value="{StaticResource ModernHorizontalScrollBarTemplate}" />
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width" Value="8" />
+                    <Setter Property="Height" Value="Auto" />
+                    <Setter Property="Template" Value="{StaticResource ModernVerticalScrollBarTemplate}" />
+                </Trigger>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto" />
+                    <Setter Property="Height" Value="8" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="EditorCanvasScrollViewerStyle"
+               TargetType="ScrollViewer">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                    Grid.Row="0"
+                                                    Grid.Column="0"
+                                                    CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                    Content="{TemplateBinding Content}" />
+
+                            <ScrollBar x:Name="PART_VerticalScrollBar"
+                                       Grid.Row="0"
+                                       Grid.Column="1"
+                                       Margin="0,10,4,10"
+                                       Orientation="Vertical"
+                                       HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch"
+                                       Style="{StaticResource ModernScrollBarStyle}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Value="{TemplateBinding VerticalOffset}" />
+
+                            <ScrollBar x:Name="PART_HorizontalScrollBar"
+                                       Grid.Row="1"
+                                       Grid.Column="0"
+                                       Margin="10,0,10,4"
+                                       Orientation="Horizontal"
+                                       HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch"
+                                       Style="{StaticResource ModernScrollBarStyle}"
+                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                                       Maximum="{TemplateBinding ScrollableWidth}"
+                                       ViewportSize="{TemplateBinding ViewportWidth}"
+                                       Value="{TemplateBinding HorizontalOffset}" />
+
+                            <Border x:Name="ScrollCorner"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Width="0"
+                                    Height="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Visibility="Collapsed" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Background="{DynamicResource WindowBackgroundBrush}"
+          Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Style="{StaticResource CompactEditorCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <WrapPanel Grid.Column="0"
+                               VerticalAlignment="Center">
+                        <Button Margin="0,0,10,0"
+                                Style="{StaticResource CompactHeaderGhostButtonStyle}"
+                                Content="Undo"
+                                Click="UndoButton_Click" />
+                        <Button Margin="0,0,10,0"
+                                Style="{StaticResource CompactHeaderGhostButtonStyle}"
+                                Content="Redo"
+                                Click="RedoButton_Click" />
+                        <Button Margin="0,0,10,0"
+                                Style="{StaticResource CompactHeaderGhostButtonStyle}"
+                                Content="Copy"
+                                Click="CopyButton_Click" />
+                        <Button Margin="0,0,10,0"
+                                Style="{StaticResource CompactHeaderGhostButtonStyle}"
+                                Content="Save As"
+                                Click="SaveAsButton_Click" />
+                        <Button Style="{StaticResource CompactHeaderAccentButtonStyle}"
+                                Content="Save"
+                                Click="SaveButton_Click" />
+                    </WrapPanel>
+
+                    <Button Grid.Column="2"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource CompactHeaderGhostButtonStyle}"
+                            Content="App Preferences"
+                            Click="PreferencesMenuItem_Click" />
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <ScrollViewer Grid.Column="0"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Hidden"
+                              PanningMode="VerticalOnly">
+                    <StackPanel>
+                        <Border Style="{StaticResource CompactEditorCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource SectionHeadingStyle}" Text="Tools" />
+                                <UniformGrid Margin="0,10,0,0"
+                                             Columns="2"
+                                             Rows="5">
+                                    <Button x:Name="PenToolButton" Margin="0,0,6,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Pen" Content="Pen" Click="ToolSelector_Click" />
+                                    <Button x:Name="HighlighterToolButton" Margin="0,0,0,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Highlighter" Content="Highlight" Click="ToolSelector_Click" />
+                                    <Button x:Name="RectangleToolButton" Margin="0,0,6,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Rectangle" Content="Rectangle" Click="ToolSelector_Click" />
+                                    <Button x:Name="EllipseToolButton" Margin="0,0,0,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Ellipse" Content="Ellipse" Click="ToolSelector_Click" />
+                                    <Button x:Name="LineToolButton" Margin="0,0,6,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Line" Content="Line" Click="ToolSelector_Click" />
+                                    <Button x:Name="ArrowToolButton" Margin="0,0,0,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Arrow" Content="Arrow" Click="ToolSelector_Click" />
+                                    <Button x:Name="TextToolButton" Margin="0,0,6,6" Style="{StaticResource CompactToolButtonStyle}" Tag="Text" Content="Text" Click="ToolSelector_Click" />
+                                    <Button x:Name="SpeechBubbleToolButton" Margin="0,0,0,6" Style="{StaticResource CompactToolButtonStyle}" Tag="SpeechBubble" Content="Speech Bubble" Click="ToolSelector_Click" />
+                                    <Button x:Name="CounterToolButton" Margin="0,0,6,0" Style="{StaticResource CompactToolButtonStyle}" Tag="Counter" Content="Counter" Click="ToolSelector_Click" />
+                                    <Button x:Name="ObfuscateToolButton" Style="{StaticResource CompactToolButtonStyle}" Tag="Obfuscate" Content="Obfuscate" Click="ToolSelector_Click" />
+                                </UniformGrid>
+
+                                <TextBlock Margin="0,10,0,0"
+                                           Style="{DynamicResource CaptionStyle}"
+                                           Text="Hint" />
+                                <TextBlock x:Name="ToolHintTextBlock"
+                                           Margin="0,6,0,0"
+                                           Style="{DynamicResource CaptionStyle}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource CompactEditorCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource SectionHeadingStyle}" Text="Image" />
+                                <UniformGrid Margin="0,10,0,0"
+                                             Columns="2"
+                                             Rows="2">
+                                    <Button Margin="0,0,6,6" Style="{StaticResource CompactToolButtonStyle}" Content="Rotate Left" Click="RotateLeftMenuItem_Click" />
+                                    <Button Margin="0,0,0,6" Style="{StaticResource CompactToolButtonStyle}" Content="Rotate Right" Click="RotateRightMenuItem_Click" />
+                                    <Button Margin="0,0,6,0" Style="{StaticResource CompactToolButtonStyle}" Content="Resize" Click="ResizeMenuItem_Click" />
+                                    <Button Style="{StaticResource CompactToolButtonStyle}" Content="Clear All" Click="ClearAnnotationsButton_Click" />
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource CompactEditorCardStyle}">
+                            <StackPanel>
+                                <TextBlock Style="{DynamicResource SectionHeadingStyle}" Text="Style" />
+                                <TextBlock Margin="0,10,0,0" Style="{DynamicResource CaptionStyle}" Text="Color" />
+                                <WrapPanel Margin="0,6,0,0">
+                                    <Button x:Name="ColorSkyButton" Margin="0,0,6,6" Style="{StaticResource CompactColorChipStyle}" Tag="#FF00A6FF" Click="ColorButton_Click" Background="#FF00A6FF" />
+                                    <Button x:Name="ColorCoralButton" Margin="0,0,6,6" Style="{StaticResource CompactColorChipStyle}" Tag="#FFFF4D6D" Click="ColorButton_Click" Background="#FFFF4D6D" />
+                                    <Button x:Name="ColorAmberButton" Margin="0,0,6,6" Style="{StaticResource CompactColorChipStyle}" Tag="#FFFFA000" Click="ColorButton_Click" Background="#FFFFA000" />
+                                    <Button x:Name="ColorEmeraldButton" Margin="0,0,6,6" Style="{StaticResource CompactColorChipStyle}" Tag="#FF00D26A" Click="ColorButton_Click" Background="#FF00D26A" />
+                                    <Button x:Name="ColorVioletButton" Margin="0,0,6,6" Style="{StaticResource CompactColorChipStyle}" Tag="#FF8B5CFF" Click="ColorButton_Click" Background="#FF8B5CFF" />
+                                    <Button x:Name="ColorWhiteButton" Margin="0,0,0,6" Style="{StaticResource CompactColorChipStyle}" Tag="#FFFFFFFF" Click="ColorButton_Click" Background="#FFFFFFFF" />
+                                </WrapPanel>
+
+                                <TextBlock Margin="0,4,0,0" Style="{DynamicResource CaptionStyle}" Text="Thickness" />
+                                <Slider x:Name="ThicknessSlider"
+                                        Margin="0,8,0,0"
+                                        Minimum="1"
+                                        Maximum="18"
+                                        Value="4"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        ValueChanged="ThicknessSlider_ValueChanged" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Border Grid.Column="2"
+                        Style="{DynamicResource CardStyle}"
+                        Padding="18">
+                    <ScrollViewer Style="{StaticResource EditorCanvasScrollViewerStyle}"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <Border Background="#16000000"
+                                CornerRadius="18"
+                                Padding="16">
+                            <Grid x:Name="EditorSurface">
+                                <Image x:Name="BaseImage"
+                                       Stretch="None"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Top"
+                                       RenderOptions.BitmapScalingMode="Fant" />
+                                <Canvas x:Name="AnnotationCanvas"
+                                        Background="Transparent"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        IsHitTestVisible="False" />
+                                <InkCanvas x:Name="InkLayer"
+                                           Background="Transparent"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Top" />
+                                <Canvas x:Name="InteractionCanvas"
+                                        Background="Transparent"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Top"
+                                        MouseLeftButtonDown="InteractionCanvas_MouseLeftButtonDown"
+                                        MouseMove="InteractionCanvas_MouseMove"
+                                        MouseLeftButtonUp="InteractionCanvas_MouseLeftButtonUp" />
+                            </Grid>
+                        </Border>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="4"
+                    Background="{DynamicResource WindowGlassBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="18"
+                    Padding="18,12">
+                <TextBlock x:Name="StatusTextBlock"
+                           FontSize="13"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           Text="Editor ready." />
+            </Border>
+    </Grid>
+</Window>
