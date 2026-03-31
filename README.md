@@ -1,4 +1,4 @@
-# <img src="csharp/Privateer.Desktop/Assets/PrivateerAppIcon.png" alt="Privateer logo" width="56" align="center" /> Privateer
+# <img src="PrivateerLogo.png" alt="Privateer logo" width="56" align="center" /> Privateer
 
 Privateer is a simple Windows screenshot tool in the spirit of Greenshot, but with a slimmer feature set and a more modern UI.
 
