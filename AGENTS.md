@@ -3,6 +3,7 @@
 ## Active Stack
 - Build the app in C# with WPF on the installed .NET Windows Desktop runtime.
 - The active application project is `csharp/Privateer.Desktop`.
+- Release packaging should use ClickOnce with a per-user installer path and no admin requirement.
 
 ## Current Product Shape
 - Windows 11-style screenshot app with a built-in editor.
@@ -108,6 +109,7 @@
 ## Commands
 - Restore/build: `dotnet build .\csharp\Privateer.Desktop\Privateer.Desktop.csproj`
 - Run: `dotnet run --project .\csharp\Privateer.Desktop\Privateer.Desktop.csproj`
+- ClickOnce publish profile: `csharp/Privateer.Desktop/Properties/PublishProfiles/Privateer.ClickOnce.pubxml`
 - When a running Privateer process is locking the default build output, verify with an alternate output folder:
 - `dotnet build .\csharp\Privateer.Desktop\Privateer.Desktop.csproj -o .\artifacts\verification`
 
