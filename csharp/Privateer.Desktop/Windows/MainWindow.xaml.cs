@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,8 +27,8 @@ public partial class MainWindow : Window
     private readonly ClipboardService _clipboardService;
     private readonly CaptureHotkeyService _captureHotkeyService;
     private readonly LaunchOnStartupService _launchOnStartupService;
+    private readonly List<EditorWindow> _editorWindows = [];
     private CaptureResult? _currentCapture;
-    private EditorWindow? _editorWindow;
     private bool _allowWindowClose;
     private bool _autoResizedForCustomHotkey;
     private bool _isApplyingTheme;
@@ -299,22 +300,6 @@ public partial class MainWindow : Window
 
         try
         {
-            if (_editorWindow is not null)
-            {
-                if (!_editorWindow.IsVisible)
-                {
-                    _editorWindow.Show();
-                }
-
-                _autoResizedForCustomHotkey = false;
-                Hide();
-                _editorWindow.WindowState = WindowState.Normal;
-                _editorWindow.Activate();
-                _editorWindow.Focus();
-                SetStatus("Editor opened.");
-                return;
-            }
-
             var editor = new EditorWindow(
                 _currentCapture,
                 _settings,
@@ -323,17 +308,18 @@ public partial class MainWindow : Window
                 _fileSaveService,
                 _clipboardService);
 
-            _editorWindow = editor;
-            editor.Closed += (_, _) =>
-            {
-                _editorWindow = null;
-            };
-
+            RegisterEditorWindow(editor);
             _themeManager.ApplyWindowTheme(editor);
             _autoResizedForCustomHotkey = false;
-            Hide();
+
+            if (IsVisible)
+            {
+                Hide();
+            }
+
             editor.Show();
             editor.Activate();
+            editor.Focus();
             SetStatus("Editor opened.");
         }
         catch (Exception ex)
@@ -558,9 +544,9 @@ public partial class MainWindow : Window
         _allowWindowClose = true;
         _autoResizedForCustomHotkey = false;
 
-        if (_editorWindow is not null)
+        foreach (var editorWindow in _editorWindows.ToList())
         {
-            _editorWindow.Close();
+            editorWindow.Close();
         }
 
         Close();
@@ -639,5 +625,11 @@ public partial class MainWindow : Window
         _lastHotkeyWarningMessage = result.Message;
         SetStatus(result.Message);
         _notifyUser?.Invoke("Capture Hotkey Unavailable", result.Message);
+    }
+
+    private void RegisterEditorWindow(EditorWindow editor)
+    {
+        _editorWindows.Add(editor);
+        editor.Closed += (_, _) => _editorWindows.Remove(editor);
     }
 }

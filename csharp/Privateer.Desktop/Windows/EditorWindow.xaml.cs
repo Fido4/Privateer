@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -9,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Privateer.Desktop.Models;
 using Privateer.Desktop.Services;
 
@@ -28,12 +30,32 @@ public partial class EditorWindow : Window
     private const string DefaultTextAnnotation = "Note";
     private const string DefaultSpeechBubbleText = "Comment";
     private const double MinimumSelectionLength = 8;
+    private const double MinimumTextAnnotationWidth = 120;
+    private const double MinimumTextAnnotationHeight = 42;
+    private const int MaximumTextAnnotationCharacters = MaximumSpeechBubbleCharacters;
+    private const int MaximumTextAnnotationCharactersPerLine = 50;
+    private const double DefaultSpeechBubbleWidth = 180;
+    private const double DefaultSpeechBubbleHeight = 54;
+    private const double MinimumSpeechBubbleTextWidth = 96;
+    private const double MaximumSpeechBubbleWidth = 420;
+    private const double MaximumSpeechBubbleHeight = 150;
+    private const int MaximumSpeechBubbleCharacters = 280;
+    private const double SpeechBubbleHorizontalInsets = 32;
+    private const double SpeechBubbleVerticalInsets = 24;
 
     private readonly BitmapSource _originalImage;
     private BitmapSource _workingImage;
     private bool _suppressHistory;
+    private bool _isCommittingTextEdit;
+    private bool _isEditingNewTextAnnotation;
+    private bool _suppressTextEditorTextChanged;
     private Point? _dragStart;
     private FrameworkElement? _previewElement;
+    private FrameworkElement? _activeTextEditorHost;
+    private TextBox? _activeTextEditor;
+    private AnnotationRecord? _editingTextAnnotation;
+    private string? _editingOriginalText;
+    private string _lastValidSpeechBubbleText = string.Empty;
     private int _historyIndex = -1;
     private int _nextCounter = 1;
     private string _selectedColorHex = "#FF00A6FF";
@@ -266,6 +288,12 @@ public partial class EditorWindow : Window
     private void InteractionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         var position = e.GetPosition(InteractionCanvas);
+        if (ShouldCommitActiveTextEditOnClick(position))
+        {
+            CommitPendingTextEdit();
+            e.Handled = true;
+            return;
+        }
 
         if (_currentTool is EditorTool.Pen or EditorTool.Eraser)
         {
@@ -274,15 +302,31 @@ public partial class EditorWindow : Window
 
         if (_currentTool == EditorTool.Text)
         {
+            CommitPendingTextEdit();
+
+            if (TryBeginTextAnnotationEdit(position, AnnotationKind.Text))
+            {
+                return;
+            }
+
             AddTextAnnotation(position);
             return;
         }
 
         if (_currentTool == EditorTool.SpeechBubble)
         {
+            CommitPendingTextEdit();
+
+            if (TryBeginTextAnnotationEdit(position, AnnotationKind.SpeechBubble))
+            {
+                return;
+            }
+
             AddSpeechBubble(position);
             return;
         }
+
+        CommitPendingTextEdit();
 
         if (_currentTool == EditorTool.Counter)
         {
@@ -337,6 +381,7 @@ public partial class EditorWindow : Window
 
     private void ClearAnnotationsButton_Click(object sender, RoutedEventArgs e)
     {
+        CancelPendingTextEdit();
         RemovePreview();
         SetWorkingImage(_originalImage);
         _annotations.Clear();
@@ -359,6 +404,7 @@ public partial class EditorWindow : Window
 
     private void SetCurrentTool(EditorTool tool)
     {
+        CommitPendingTextEdit();
         _currentTool = tool;
 
         foreach (var (registeredTool, button) in _toolButtons)
@@ -502,10 +548,10 @@ public partial class EditorWindow : Window
             FontSize = Math.Max(16, ThicknessSlider.Value * 3)
         };
 
+        RefreshTextAnnotationLayout(record);
         _annotations.Add(record);
         RenderAnnotations();
-        CommitSnapshot();
-        SetStatus("Text added.");
+        BeginTextAnnotationEdit(record, true);
     }
 
     private void AddSpeechBubble(Point position)
@@ -518,14 +564,14 @@ public partial class EditorWindow : Window
             Text = DefaultSpeechBubbleText,
             ColorHex = _selectedColorHex,
             FontSize = Math.Max(15, ThicknessSlider.Value * 2.6),
-            Width = 220,
-            Height = 92
+            Width = DefaultSpeechBubbleWidth,
+            Height = DefaultSpeechBubbleHeight
         };
 
+        RefreshTextAnnotationLayout(record);
         _annotations.Add(record);
         RenderAnnotations();
-        CommitSnapshot();
-        SetStatus("Speech bubble added.");
+        BeginTextAnnotationEdit(record, true);
     }
 
     private void AddCounter(Point position)
@@ -633,6 +679,11 @@ public partial class EditorWindow : Window
 
         foreach (var annotation in _annotations)
         {
+            if (ReferenceEquals(annotation, _editingTextAnnotation))
+            {
+                continue;
+            }
+
             AnnotationCanvas.Children.Add(BuildAnnotationElement(annotation, false));
         }
     }
@@ -762,6 +813,8 @@ public partial class EditorWindow : Window
     {
         var container = new Border
         {
+            Width = annotation.Width <= 0 ? MinimumTextAnnotationWidth : annotation.Width,
+            Height = annotation.Height <= 0 ? MinimumTextAnnotationHeight : annotation.Height,
             Background = new SolidColorBrush(Color.FromArgb(190, 18, 18, 18)),
             BorderBrush = brush,
             BorderThickness = new Thickness(1),
@@ -774,7 +827,8 @@ public partial class EditorWindow : Window
             Text = annotation.Text ?? "Note",
             Foreground = brush,
             FontFamily = new FontFamily("Consolas"),
-            FontSize = annotation.FontSize
+            FontSize = annotation.FontSize,
+            TextWrapping = TextWrapping.Wrap
         };
 
         Canvas.SetLeft(container, annotation.StartX);
@@ -784,8 +838,8 @@ public partial class EditorWindow : Window
 
     private static FrameworkElement BuildSpeechBubble(AnnotationRecord annotation, Brush brush)
     {
-        var width = annotation.Width <= 0 ? 220 : annotation.Width;
-        var height = annotation.Height <= 0 ? 92 : annotation.Height;
+        var width = annotation.Width <= 0 ? DefaultSpeechBubbleWidth : annotation.Width;
+        var height = annotation.Height <= 0 ? DefaultSpeechBubbleHeight : annotation.Height;
 
         var canvas = new Canvas
         {
@@ -808,6 +862,7 @@ public partial class EditorWindow : Window
                 Text = annotation.Text ?? "Comment",
                 Foreground = brush,
                 TextWrapping = TextWrapping.Wrap,
+                FontFamily = new FontFamily("Consolas"),
                 FontSize = annotation.FontSize
             }
         };
@@ -903,6 +958,7 @@ public partial class EditorWindow : Window
     {
         try
         {
+            CommitPendingTextEdit();
             RemovePreview();
             var transformedImage = imageTransform(_workingImage);
             var transformedAnnotations = _annotations.Select(annotationTransform).ToList();
@@ -962,6 +1018,8 @@ public partial class EditorWindow : Window
 
     private void Undo()
     {
+        CommitPendingTextEdit();
+
         if (_historyIndex <= 0)
         {
             return;
@@ -974,6 +1032,8 @@ public partial class EditorWindow : Window
 
     private void Redo()
     {
+        CommitPendingTextEdit();
+
         if (_historyIndex >= _history.Count - 1)
         {
             return;
@@ -1004,6 +1064,7 @@ public partial class EditorWindow : Window
     {
         try
         {
+            CommitPendingTextEdit();
             var rendered = RenderEditedImage();
             var path = _fileSaveService.SaveToPreferredLocation(rendered, _settings, DateTimeOffset.Now);
             _settingsService.Save(_settings);
@@ -1019,6 +1080,7 @@ public partial class EditorWindow : Window
     {
         try
         {
+            CommitPendingTextEdit();
             var rendered = RenderEditedImage();
             var path = _fileSaveService.SaveAs(this, rendered, _settings, DateTimeOffset.Now);
             if (string.IsNullOrWhiteSpace(path))
@@ -1040,6 +1102,7 @@ public partial class EditorWindow : Window
     {
         try
         {
+            CommitPendingTextEdit();
             _clipboardService.CopyImage(RenderEditedImage());
             SetStatus("Edited image copied to the clipboard.");
         }
@@ -1337,6 +1400,545 @@ public partial class EditorWindow : Window
         strokes.Save(stream);
         stream.Position = 0;
         return new StrokeCollection(stream);
+    }
+
+    private bool ShouldCommitActiveTextEditOnClick(Point clickPosition)
+    {
+        if (_activeTextEditorHost is null)
+        {
+            return false;
+        }
+
+        var left = Canvas.GetLeft(_activeTextEditorHost);
+        var top = Canvas.GetTop(_activeTextEditorHost);
+        var width = _activeTextEditorHost.ActualWidth > 0 ? _activeTextEditorHost.ActualWidth : _activeTextEditorHost.Width;
+        var height = _activeTextEditorHost.ActualHeight > 0 ? _activeTextEditorHost.ActualHeight : _activeTextEditorHost.Height;
+        var editorBounds = new Rect(left, top, width, height);
+        return !editorBounds.Contains(clickPosition);
+    }
+
+    private bool TryBeginTextAnnotationEdit(Point position, AnnotationKind kind)
+    {
+        var annotation = _annotations
+            .LastOrDefault(candidate => candidate.Kind == kind && GetEditableBounds(candidate).Contains(position));
+
+        if (annotation is null)
+        {
+            return false;
+        }
+
+        BeginTextAnnotationEdit(annotation, false);
+        return true;
+    }
+
+    private void BeginTextAnnotationEdit(AnnotationRecord annotation, bool isNewAnnotation)
+    {
+        FinishTextEditing(commitChanges: true);
+
+        _editingTextAnnotation = annotation;
+        _editingOriginalText = annotation.Text ?? string.Empty;
+        _isEditingNewTextAnnotation = isNewAnnotation;
+        _lastValidSpeechBubbleText = annotation.Text ?? string.Empty;
+
+        var (host, editor) = BuildTextEditor(annotation);
+        _activeTextEditorHost = host;
+        _activeTextEditor = editor;
+        InteractionCanvas.Children.Add(host);
+        PositionTextEditor(annotation, host);
+
+        editor.Loaded += (_, _) =>
+        {
+            editor.Focus();
+            editor.SelectAll();
+        };
+
+        SetStatus(annotation.Kind == AnnotationKind.Text
+            ? "Type your text and click away to apply it."
+            : "Type your speech bubble text and click away to apply it.");
+    }
+
+    private (FrameworkElement Host, TextBox Editor) BuildTextEditor(AnnotationRecord annotation)
+    {
+        var isSpeechBubble = annotation.Kind == AnnotationKind.SpeechBubble;
+        if (!isSpeechBubble && (annotation.Width <= 0 || annotation.Height <= 0))
+        {
+            RefreshTextAnnotationLayout(annotation);
+        }
+
+        var bubbleWidth = annotation.Width <= 0 ? DefaultSpeechBubbleWidth : annotation.Width;
+        var bubbleHeight = annotation.Height <= 0 ? DefaultSpeechBubbleHeight : annotation.Height;
+
+        var textWidth = isSpeechBubble
+            ? Math.Max(MinimumSpeechBubbleTextWidth, bubbleWidth - 28)
+            : Math.Max(MinimumTextAnnotationWidth - 24, annotation.Width - 24);
+        var textHeight = isSpeechBubble
+            ? Math.Max(42, bubbleHeight - 20)
+            : Math.Max(MinimumTextAnnotationHeight - 16, annotation.Height - 16);
+
+        var editor = new TextBox
+        {
+            Text = annotation.Text ?? string.Empty,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = annotation.FontSize,
+            Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(annotation.ColorHex)),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            AcceptsReturn = true,
+            TextWrapping = isSpeechBubble || ShouldWrapTextAnnotation(annotation.Text ?? string.Empty, annotation.FontSize)
+                ? TextWrapping.Wrap
+                : TextWrapping.NoWrap,
+            VerticalContentAlignment = VerticalAlignment.Top,
+            MinWidth = textWidth,
+            Width = textWidth,
+            MinHeight = textHeight,
+            Height = textHeight,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            BorderBrush = Brushes.Transparent,
+            CaretBrush = Brushes.White,
+            FocusVisualStyle = null
+        };
+
+        if (isSpeechBubble)
+        {
+            editor.MaxLength = MaximumSpeechBubbleCharacters;
+        }
+        else
+        {
+            editor.MaxLength = MaximumTextAnnotationCharacters;
+        }
+
+        editor.PreviewKeyDown += ActiveTextEditor_PreviewKeyDown;
+        editor.LostKeyboardFocus += ActiveTextEditor_LostKeyboardFocus;
+        editor.TextChanged += ActiveTextEditor_TextChanged;
+
+        if (isSpeechBubble)
+        {
+            var bubble = new Border
+            {
+                Width = bubbleWidth,
+                Height = bubbleHeight,
+                Background = new SolidColorBrush(Color.FromArgb(210, 20, 20, 20)),
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(annotation.ColorHex)),
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(16),
+                Padding = new Thickness(14, 10, 14, 10),
+                Child = editor
+            };
+
+            var tail = new Polygon
+            {
+                Fill = new SolidColorBrush(Color.FromArgb(210, 20, 20, 20)),
+                Stroke = new SolidColorBrush((Color)ColorConverter.ConvertFromString(annotation.ColorHex)),
+                StrokeThickness = 2,
+                Points = [new Point(28, bubbleHeight), new Point(52, bubbleHeight), new Point(18, bubbleHeight + 20)]
+            };
+
+            var bubbleHost = new Canvas
+            {
+                Width = bubbleWidth + 24,
+                Height = bubbleHeight + 24,
+                Background = Brushes.Transparent
+            };
+
+            bubbleHost.Children.Add(bubble);
+            bubbleHost.Children.Add(tail);
+            return (bubbleHost, editor);
+        }
+
+        var host = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(190, 18, 18, 18)),
+            BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(annotation.ColorHex)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(12, 8, 12, 8),
+            Child = editor
+        };
+
+        return (host, editor);
+    }
+
+    private void PositionTextEditor(AnnotationRecord annotation, FrameworkElement host)
+    {
+        Canvas.SetLeft(host, annotation.StartX);
+        Canvas.SetTop(host, annotation.StartY);
+    }
+
+    private void ActiveTextEditor_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_activeTextEditor is null)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            FinishTextEditing(commitChanges: false);
+            e.Handled = true;
+            return;
+        }
+
+        if (_editingTextAnnotation is not null &&
+            e.Key == Key.Enter &&
+            Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            FinishTextEditing(commitChanges: true);
+            e.Handled = true;
+        }
+    }
+
+    private void ActiveTextEditor_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (!_isCommittingTextEdit)
+        {
+            FinishTextEditing(commitChanges: true);
+        }
+    }
+
+    private void ActiveTextEditor_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressTextEditorTextChanged || _activeTextEditor is null || _editingTextAnnotation is null)
+        {
+            return;
+        }
+
+        if (_editingTextAnnotation.Kind == AnnotationKind.SpeechBubble)
+        {
+            var candidateText = _activeTextEditor.Text;
+            if (!TryMeasureSpeechBubbleAnnotation(candidateText, _editingTextAnnotation.FontSize, out var candidateBubbleSize))
+            {
+                _suppressTextEditorTextChanged = true;
+                var caretIndex = Math.Max(0, Math.Min(_activeTextEditor.CaretIndex - 1, _lastValidSpeechBubbleText.Length));
+                _activeTextEditor.Text = _lastValidSpeechBubbleText;
+                _activeTextEditor.CaretIndex = caretIndex;
+                _suppressTextEditorTextChanged = false;
+                return;
+            }
+
+            _lastValidSpeechBubbleText = candidateText;
+            _editingTextAnnotation.Text = candidateText;
+            _editingTextAnnotation.Width = candidateBubbleSize.Width;
+            _editingTextAnnotation.Height = candidateBubbleSize.Height;
+            UpdateSpeechBubbleEditorLayout(_editingTextAnnotation, _activeTextEditor);
+            RenderAnnotations();
+            Dispatcher.BeginInvoke(() => _activeTextEditor?.UpdateLayout(), DispatcherPriority.Background);
+            return;
+        }
+
+        if (_editingTextAnnotation.Kind == AnnotationKind.Text)
+        {
+            var candidateText = _activeTextEditor.Text;
+            if (!TryMeasureTextAnnotation(candidateText, _editingTextAnnotation.FontSize, out var candidateTextSize))
+            {
+                _suppressTextEditorTextChanged = true;
+                var caretIndex = Math.Max(0, Math.Min(_activeTextEditor.CaretIndex - 1, (_editingOriginalText ?? string.Empty).Length));
+                _activeTextEditor.Text = _editingTextAnnotation.Text ?? string.Empty;
+                _activeTextEditor.CaretIndex = Math.Min(caretIndex, _activeTextEditor.Text.Length);
+                _suppressTextEditorTextChanged = false;
+                return;
+            }
+
+            _editingTextAnnotation.Text = candidateText;
+            _editingTextAnnotation.Width = candidateTextSize.Width;
+            _editingTextAnnotation.Height = candidateTextSize.Height;
+            UpdateTextAnnotationEditorLayout(_editingTextAnnotation, _activeTextEditor);
+            RenderAnnotations();
+            Dispatcher.BeginInvoke(() => _activeTextEditor?.UpdateLayout(), DispatcherPriority.Background);
+            return;
+        }
+
+        _editingTextAnnotation.Text = _activeTextEditor.Text;
+        RefreshTextAnnotationLayout(_editingTextAnnotation);
+
+        RenderAnnotations();
+        Dispatcher.BeginInvoke(() => _activeTextEditor?.UpdateLayout(), DispatcherPriority.Background);
+    }
+
+    private void CommitPendingTextEdit()
+    {
+        FinishTextEditing(commitChanges: true);
+    }
+
+    private void CancelPendingTextEdit()
+    {
+        FinishTextEditing(commitChanges: false);
+    }
+
+    private void FinishTextEditing(bool commitChanges)
+    {
+        if (_activeTextEditor is null || _editingTextAnnotation is null || _isCommittingTextEdit)
+        {
+            return;
+        }
+
+        _isCommittingTextEdit = true;
+
+        var editor = _activeTextEditor;
+        var annotation = _editingTextAnnotation;
+        var originalText = _editingOriginalText ?? string.Empty;
+        var isNewAnnotation = _isEditingNewTextAnnotation;
+        var updatedText = editor.Text.Trim();
+
+        editor.PreviewKeyDown -= ActiveTextEditor_PreviewKeyDown;
+        editor.LostKeyboardFocus -= ActiveTextEditor_LostKeyboardFocus;
+        editor.TextChanged -= ActiveTextEditor_TextChanged;
+        InteractionCanvas.Children.Remove(_activeTextEditorHost ?? editor);
+
+        _activeTextEditorHost = null;
+        _activeTextEditor = null;
+        _editingTextAnnotation = null;
+        _editingOriginalText = null;
+        _isEditingNewTextAnnotation = false;
+
+        if (!commitChanges)
+        {
+            if (isNewAnnotation)
+            {
+                _annotations.Remove(annotation);
+                SetStatus(annotation.Kind == AnnotationKind.Text ? "Text canceled." : "Speech bubble canceled.");
+            }
+            else
+            {
+                annotation.Text = originalText;
+                RefreshTextAnnotationLayout(annotation);
+                SetStatus(annotation.Kind == AnnotationKind.Text ? "Text edit canceled." : "Speech bubble edit canceled.");
+            }
+
+            RenderAnnotations();
+            _isCommittingTextEdit = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(updatedText))
+        {
+            if (isNewAnnotation)
+            {
+                _annotations.Remove(annotation);
+                SetStatus(annotation.Kind == AnnotationKind.Text ? "Text canceled." : "Speech bubble canceled.");
+            }
+            else
+            {
+                annotation.Text = originalText;
+                RefreshTextAnnotationLayout(annotation);
+                SetStatus(annotation.Kind == AnnotationKind.Text ? "Text unchanged." : "Speech bubble unchanged.");
+            }
+
+            RenderAnnotations();
+            _isCommittingTextEdit = false;
+            return;
+        }
+
+        annotation.Text = updatedText;
+        RefreshTextAnnotationLayout(annotation);
+        RenderAnnotations();
+
+        if (isNewAnnotation || !string.Equals(originalText, updatedText, StringComparison.Ordinal))
+        {
+            CommitSnapshot();
+            SetStatus(annotation.Kind == AnnotationKind.Text ? "Text added." : "Speech bubble added.");
+        }
+        else
+        {
+            SetStatus(annotation.Kind == AnnotationKind.Text ? "Text unchanged." : "Speech bubble unchanged.");
+        }
+
+        _isCommittingTextEdit = false;
+    }
+
+    private void RefreshTextAnnotationLayout(AnnotationRecord annotation)
+    {
+        if (annotation.Kind == AnnotationKind.Text)
+        {
+            var size = MeasureTextAnnotation(annotation);
+            annotation.Width = size.Width;
+            annotation.Height = size.Height;
+            return;
+        }
+
+        if (annotation.Kind == AnnotationKind.SpeechBubble)
+        {
+            var bubbleSize = MeasureSpeechBubbleAnnotation(annotation);
+            annotation.Width = bubbleSize.Width;
+            annotation.Height = bubbleSize.Height;
+        }
+    }
+
+    private Size MeasureTextAnnotation(AnnotationRecord annotation)
+    {
+        var text = string.IsNullOrWhiteSpace(annotation.Text) ? DefaultTextAnnotation : annotation.Text;
+        return MeasureTextAnnotation(text, annotation.FontSize);
+    }
+
+    private Size MeasureTextAnnotation(string text, double fontSize)
+    {
+        TryMeasureTextAnnotation(text, fontSize, out var measured);
+        return measured;
+    }
+
+    private bool TryMeasureTextAnnotation(string text, double fontSize, out Size measured)
+    {
+        text = string.IsNullOrWhiteSpace(text) ? DefaultTextAnnotation : text;
+        var maxContentWidth = GetMaximumTextAnnotationContentWidth(fontSize);
+        var longestLineWidth = GetLongestTextLineWidth(text, fontSize);
+        var shouldWrap = text.Contains('\n') || text.Contains('\r') || longestLineWidth > maxContentWidth;
+        var effectiveWidth = shouldWrap ? maxContentWidth : longestLineWidth;
+        var contentSize = MeasureTextContent(text, fontSize, effectiveWidth);
+        measured = new Size(
+            Math.Max(MinimumTextAnnotationWidth, Math.Min(maxContentWidth, Math.Max(longestLineWidth, contentSize.Width)) + 24),
+            Math.Max(MinimumTextAnnotationHeight, contentSize.Height + 16));
+        return text.Length <= MaximumTextAnnotationCharacters;
+    }
+
+    private Size MeasureSpeechBubbleText(AnnotationRecord annotation, double bubbleWidth)
+    {
+        var text = string.IsNullOrWhiteSpace(annotation.Text) ? DefaultSpeechBubbleText : annotation.Text;
+        var textWidth = Math.Max(MinimumSpeechBubbleTextWidth, bubbleWidth - SpeechBubbleHorizontalInsets);
+        return MeasureTextBlock(text, annotation.FontSize, textWidth);
+    }
+
+    private Size MeasureSpeechBubbleAnnotation(AnnotationRecord annotation)
+    {
+        var text = string.IsNullOrWhiteSpace(annotation.Text) ? DefaultSpeechBubbleText : annotation.Text;
+        return MeasureSpeechBubbleAnnotation(text, annotation.FontSize);
+    }
+
+    private Size MeasureSpeechBubbleAnnotation(string text, double fontSize)
+    {
+        TryMeasureSpeechBubbleAnnotation(text, fontSize, out var bubbleSize);
+        return bubbleSize;
+    }
+
+    private bool TryMeasureSpeechBubbleAnnotation(string text, double fontSize, out Size bubbleSize)
+    {
+        text = string.IsNullOrWhiteSpace(text) ? DefaultSpeechBubbleText : text;
+        var singleLineSize = MeasureTextBlock(text, fontSize, double.PositiveInfinity);
+        var desiredBubbleWidth = Math.Min(
+            MaximumSpeechBubbleWidth,
+            Math.Max(DefaultSpeechBubbleWidth, singleLineSize.Width + SpeechBubbleHorizontalInsets));
+        var textWidth = Math.Max(MinimumSpeechBubbleTextWidth, desiredBubbleWidth - SpeechBubbleHorizontalInsets);
+        var textSize = MeasureTextBlock(text, fontSize, textWidth);
+        var desiredBubbleHeight = Math.Max(DefaultSpeechBubbleHeight, textSize.Height + SpeechBubbleVerticalInsets);
+        bubbleSize = new Size(desiredBubbleWidth, Math.Min(MaximumSpeechBubbleHeight, desiredBubbleHeight));
+        return desiredBubbleHeight <= MaximumSpeechBubbleHeight && text.Length <= MaximumSpeechBubbleCharacters;
+    }
+
+    private void UpdateSpeechBubbleEditorLayout(AnnotationRecord annotation, TextBox editor)
+    {
+        if (_activeTextEditorHost is Canvas host && host.Children.Count >= 2)
+        {
+            host.Width = annotation.Width + 24;
+            host.Height = annotation.Height + 24;
+
+            if (host.Children[0] is Border bubble)
+            {
+                bubble.Width = annotation.Width;
+                bubble.Height = annotation.Height;
+            }
+
+            if (host.Children[1] is Polygon tail)
+            {
+                tail.Points = [new Point(28, annotation.Height), new Point(52, annotation.Height), new Point(18, annotation.Height + 20)];
+            }
+
+            PositionTextEditor(annotation, host);
+        }
+
+        editor.Width = Math.Max(MinimumSpeechBubbleTextWidth, annotation.Width - SpeechBubbleHorizontalInsets);
+        editor.MinWidth = editor.Width;
+        editor.Height = Math.Max(42, annotation.Height - SpeechBubbleVerticalInsets);
+        editor.MinHeight = editor.Height;
+    }
+
+    private void UpdateTextAnnotationEditorLayout(AnnotationRecord annotation, TextBox editor)
+    {
+        if (_activeTextEditorHost is Border host)
+        {
+            host.Width = Math.Max(MinimumTextAnnotationWidth, annotation.Width);
+            host.Height = Math.Max(MinimumTextAnnotationHeight, annotation.Height);
+            PositionTextEditor(annotation, host);
+        }
+
+        editor.TextWrapping = ShouldWrapTextAnnotation(annotation.Text ?? string.Empty, annotation.FontSize)
+            ? TextWrapping.Wrap
+            : TextWrapping.NoWrap;
+        editor.Width = Math.Max(MinimumTextAnnotationWidth - 24, annotation.Width - 24);
+        editor.MinWidth = editor.Width;
+        editor.Height = Math.Max(MinimumTextAnnotationHeight - 16, annotation.Height - 16);
+        editor.MinHeight = editor.Height;
+    }
+
+    private Size MeasureTextBlock(string text, double fontSize, double maxWidth)
+    {
+        var contentSize = MeasureTextContent(text, fontSize, maxWidth);
+        return new Size(
+            Math.Ceiling(contentSize.Width + 24),
+            Math.Ceiling(contentSize.Height + 16));
+    }
+
+    private Size MeasureTextContent(string text, double fontSize, double maxWidth)
+    {
+        var measurementText = new TextBlock
+        {
+            Text = string.IsNullOrEmpty(text) ? " " : text,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = fontSize,
+            TextWrapping = double.IsInfinity(maxWidth) ? TextWrapping.NoWrap : TextWrapping.Wrap
+        };
+
+        var measureWidth = double.IsInfinity(maxWidth) ? double.PositiveInfinity : maxWidth;
+        measurementText.Measure(new Size(measureWidth, double.PositiveInfinity));
+
+        return new Size(
+            Math.Ceiling(measurementText.DesiredSize.Width),
+            Math.Ceiling(measurementText.DesiredSize.Height));
+    }
+
+    private double MeasureRawTextWidth(string text, double fontSize)
+    {
+        return MeasureTextContent(text, fontSize, double.PositiveInfinity).Width;
+    }
+
+    private double GetMaximumTextAnnotationContentWidth(double fontSize)
+    {
+        return MeasureRawTextWidth(new string('W', MaximumTextAnnotationCharactersPerLine), fontSize);
+    }
+
+    private double GetLongestTextLineWidth(string text, double fontSize)
+    {
+        var lines = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n');
+
+        return lines
+            .Select(line => MeasureRawTextWidth(string.IsNullOrEmpty(line) ? " " : line, fontSize))
+            .DefaultIfEmpty(0)
+            .Max();
+    }
+
+    private bool ShouldWrapTextAnnotation(string text, double fontSize)
+    {
+        if (text.Contains('\n') || text.Contains('\r'))
+        {
+            return true;
+        }
+
+        return GetLongestTextLineWidth(text, fontSize) > GetMaximumTextAnnotationContentWidth(fontSize);
+    }
+
+    private Rect GetEditableBounds(AnnotationRecord annotation)
+    {
+        return annotation.Kind switch
+        {
+            AnnotationKind.Text => new Rect(annotation.StartX, annotation.StartY, MeasureTextAnnotation(annotation).Width, MeasureTextAnnotation(annotation).Height),
+            AnnotationKind.SpeechBubble => new Rect(
+                annotation.StartX,
+                annotation.StartY,
+                (annotation.Width <= 0 ? DefaultSpeechBubbleWidth : annotation.Width) + 24,
+                (annotation.Height <= 0 ? DefaultSpeechBubbleHeight : annotation.Height) + 24),
+            _ => Rect.Empty
+        };
     }
 
     private bool IsEditorSurfaceReady()

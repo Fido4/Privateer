@@ -38,7 +38,7 @@
 - The app should use a classic terminal-style font family across the UI, with shared theme resources driving that typography consistently instead of mixing in Windows variable UI fonts.
 - Menus and menu flyouts should use shared themed templates rather than default WPF menu chrome where menus still exist elsewhere in the app.
 - The editor should not show a separate top menu strip; keep app-level preferences in an `App Preferences` button inside the header bubble and remove the `Editor` label from that row.
-- Opening the editor should hide the main app window without exiting the app, and `App Preferences` from the editor should reopen the main window as a peer window that can come in front of the editor.
+- Opening the editor should hide the main app window without exiting the app, and each captured screenshot should open in its own editor window so multiple screenshots can be edited side by side. `App Preferences` from any editor should reopen the main window as a peer window that can come in front of the editors.
 - Privateer should be able to run with no main window open via a tray icon in the Windows notification area, keep capture hotkeys active in the background, and expose `Preferences` and `Exit` from the tray icon context menu.
 - The tray icon context menu should follow the currently active Privateer theme instead of using the default WinForms white menu chrome.
 - The tray icon context menu should stay compact, center its menu labels, avoid hover highlight fills, and render its separator line flush across the full menu width.
@@ -74,6 +74,10 @@
 - Editor image operations like rotate, resize, and region obfuscation should preserve the current annotation state cleanly so undo, redo, and `Clear All` remain reliable after edits.
 - Editor `Clear All` should restore the original captured image and remove every editor change, including rotations, resizes, obfuscation, strokes, and annotations.
 - The editor highlight tool should behave like a rectangle-region marker with a translucent fill and no final outline, while the obfuscation tool should immediately pixelate the selected region without leaving a border behind.
+- Text and speech-bubble annotations should enter inline edit mode when placed, and re-clicking an existing one with the matching tool should edit its text instead of spawning a duplicate static annotation.
+- Speech-bubble editing should resize live while the user types so the editable text area and final bubble keep pace with the content instead of only expanding after commit.
+- Speech bubbles should grow in both width and height from normal typing and soft wraps, not only from explicit `Enter` newlines, and should stop accepting additional text once they hit the configured size/character cap.
+- Plain text annotations should wrap instead of running off the image, using a roughly 50-character line width and the same overall character cap as speech bubbles.
 - Editor arrows should land the head directly on the selected endpoint, with the shaft terminating inside the head so the mark reads as one continuous arrow instead of a line plus a slightly offset triangle.
 - Editor utility dialogs like `Resize Image` should open large enough to show every input, checkbox, and action button without clipping at default DPI.
 - The editor should open as a medium desktop window by default rather than near-fullscreen, with just enough default height to avoid left-rail overflow in the normal layout.
