@@ -67,7 +67,8 @@
 - Editor control event handlers must tolerate `InitializeComponent` ordering, because slider or similar value-changed events can fire before the drawing surface controls are fully ready.
 - The editor left rail should use a compact card and button density so the `Tools` with inline hint text, `Image`, and `Style` sections fit in the default window without a vertical scrollbar.
 - The editor `Style` card should only expose color and thickness; text and speech bubble tools now use built-in default labels instead of a persistent input field.
-- The editor color chips should stay limited to the current six options, but use saturated, high-contrast versions of those colors rather than softer pastel variants.
+- The editor Style color row should expose six choices: black, red, amber, green, white, and one custom color chip populated from the custom hex input below it.
+- Red should be the default editor markup color for fresh settings, and the editor should persist the last selected markup color, including custom hex colors, so future editor windows reopen with that color selected.
 - The selected editor color chip should indicate selection with that chip's own color ring and sizing, not with the global neon green accent.
 - Editor tool-button and color-chip selection visuals should stay bound to live theme resources so an already-open editor updates cleanly when the app theme changes.
 - The editor header should stay compact and toolbar-like rather than using a tall hero card.
@@ -113,7 +114,7 @@
 ## Commands
 - Restore/build: `dotnet build .\csharp\Privateer.Desktop\Privateer.Desktop.csproj`
 - Run: `dotnet run --project .\csharp\Privateer.Desktop\Privateer.Desktop.csproj`
-- Self-contained publish for installer: `dotnet publish .\csharp\Privateer.Desktop\Privateer.Desktop.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\releases\1.0.0\installer\publish`
+- Self-contained publish for installer: `dotnet publish .\csharp\Privateer.Desktop\Privateer.Desktop.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\releases\1.1.0\installer\publish`
 - Inno Setup script: `installer\Privateer.iss`
 - When a running Privateer process is locking the default build output, verify with an alternate output folder:
 - `dotnet build .\csharp\Privateer.Desktop\Privateer.Desktop.csproj -o .\artifacts\verification`

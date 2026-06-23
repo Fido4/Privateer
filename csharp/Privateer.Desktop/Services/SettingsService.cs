@@ -51,6 +51,10 @@ public sealed class SettingsService
 
     private static AppSettings Normalize(AppSettings settings)
     {
+        settings.EditorColorHex = TryNormalizeEditorColor(settings.EditorColorHex, out var editorColorHex)
+            ? editorColorHex
+            : "#FFFF4D6D";
+
         settings.CustomCaptureHotkey = string.IsNullOrWhiteSpace(settings.CustomCaptureHotkey)
             ? "Ctrl+Shift+4"
             : settings.CustomCaptureHotkey.Trim();
@@ -72,5 +76,42 @@ public sealed class SettingsService
         }
 
         return settings;
+    }
+
+    private static bool TryNormalizeEditorColor(string? colorHex, out string normalizedColorHex)
+    {
+        normalizedColorHex = "#FFFF4D6D";
+
+        if (string.IsNullOrWhiteSpace(colorHex))
+        {
+            return false;
+        }
+
+        var candidate = colorHex.Trim();
+        if (!candidate.StartsWith('#'))
+        {
+            candidate = $"#{candidate}";
+        }
+
+        if (candidate.Length == 7)
+        {
+            candidate = $"#FF{candidate[1..]}";
+        }
+
+        if (candidate.Length != 9)
+        {
+            return false;
+        }
+
+        for (var i = 1; i < candidate.Length; i++)
+        {
+            if (!Uri.IsHexDigit(candidate[i]))
+            {
+                return false;
+            }
+        }
+
+        normalizedColorHex = candidate.ToUpperInvariant();
+        return true;
     }
 }

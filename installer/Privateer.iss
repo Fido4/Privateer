@@ -1,9 +1,9 @@
 #define MyAppName "Privateer"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Privateer"
 #define MyAppExeName "Privateer.Desktop.exe"
-#define MyPublishDir "..\artifacts\releases\1.0.0\installer\publish"
-#define MyOutputDir "..\artifacts\releases\1.0.0\installer"
+#define MyPublishDir "..\artifacts\releases\1.1.0\installer\publish"
+#define MyOutputDir "..\artifacts\releases\1.1.0\installer"
 
 [Setup]
 AppId={{1A3F6D5E-492D-4E33-9C97-85E452D6B0C4}
@@ -20,7 +20,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir={#MyOutputDir}
-OutputBaseFilename=PrivateerSetup-1.0.0
+OutputBaseFilename=PrivateerSetup-1.1.0
 SetupIconFile=..\csharp\Privateer.Desktop\Assets\PrivateerAppIcon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma

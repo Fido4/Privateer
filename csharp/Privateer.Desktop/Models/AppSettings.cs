@@ -38,5 +38,7 @@ public sealed class AppSettings
 
     public string CustomCaptureHotkey { get; set; } = "Ctrl+Shift+4";
 
+    public string EditorColorHex { get; set; } = "#FFFF4D6D";
+
     public bool LaunchOnStartup { get; set; }
 }

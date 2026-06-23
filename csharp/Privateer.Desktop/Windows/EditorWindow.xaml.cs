@@ -49,6 +49,7 @@ public partial class EditorWindow : Window
     private bool _isCommittingTextEdit;
     private bool _isEditingNewTextAnnotation;
     private bool _suppressTextEditorTextChanged;
+    private bool _suppressCustomColorTextChanged;
     private Point? _dragStart;
     private FrameworkElement? _previewElement;
     private FrameworkElement? _activeTextEditorHost;
@@ -58,7 +59,7 @@ public partial class EditorWindow : Window
     private string _lastValidSpeechBubbleText = string.Empty;
     private int _historyIndex = -1;
     private int _nextCounter = 1;
-    private string _selectedColorHex = "#FF00A6FF";
+    private string _selectedColorHex = "#FFFF4D6D";
     private EditorTool _currentTool = EditorTool.Pen;
 
     public EditorWindow(
@@ -78,11 +79,13 @@ public partial class EditorWindow : Window
         _themeManager = themeManager;
         _fileSaveService = fileSaveService;
         _clipboardService = clipboardService;
+        _selectedColorHex = NormalizeEditorColor(_settings.EditorColorHex);
 
         Loaded += (_, _) => _themeManager.ApplyWindowTheme(this);
 
         RegisterButtons();
         SetWorkingImage(_workingImage);
+        InitializeCustomColorInput(_selectedColorHex);
 
         InkLayer.StrokeCollected += InkLayer_StrokeCollected;
         InkLayer.Strokes.StrokesChanged += Strokes_StrokesChanged;
@@ -153,12 +156,12 @@ public partial class EditorWindow : Window
         _toolButtons[EditorTool.Obfuscate] = ObfuscateToolButton;
 
         _colorButtons.AddRange([
-            ColorSkyButton,
+            ColorBlackButton,
             ColorCoralButton,
             ColorAmberButton,
             ColorEmeraldButton,
-            ColorVioletButton,
-            ColorWhiteButton
+            ColorWhiteButton,
+            ColorCustomButton
         ]);
     }
 
@@ -222,7 +225,7 @@ public partial class EditorWindow : Window
         var colorHex = (sender as FrameworkElement)?.Tag?.ToString();
         if (!string.IsNullOrWhiteSpace(colorHex))
         {
-            SelectColor(colorHex);
+            SelectColor(colorHex, persist: true);
         }
     }
 
@@ -234,6 +237,25 @@ public partial class EditorWindow : Window
         }
 
         UpdateDrawingAttributes();
+    }
+
+    private void CustomColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppressCustomColorTextChanged)
+        {
+            return;
+        }
+
+        if (!TryNormalizeEditorColor(CustomColorTextBox.Text, out var colorHex))
+        {
+            ColorCustomButton.Background = Brushes.Transparent;
+            CustomColorTextBox.ClearValue(BorderBrushProperty);
+            return;
+        }
+
+        ColorCustomButton.Tag = colorHex;
+        ColorCustomButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorHex));
+        SelectColor(colorHex, persist: true);
     }
 
     private void RotateLeftMenuItem_Click(object sender, RoutedEventArgs e)
@@ -427,13 +449,14 @@ public partial class EditorWindow : Window
         UpdateToolMode();
     }
 
-    private void SelectColor(string colorHex)
+    private void SelectColor(string colorHex, bool persist = false)
     {
-        _selectedColorHex = colorHex;
+        _selectedColorHex = NormalizeEditorColor(colorHex);
+        UpdateCustomColorChip(_selectedColorHex);
 
         foreach (var button in _colorButtons)
         {
-            var isSelected = string.Equals(button.Tag?.ToString(), colorHex, StringComparison.OrdinalIgnoreCase);
+            var isSelected = string.Equals(button.Tag?.ToString(), _selectedColorHex, StringComparison.OrdinalIgnoreCase);
 
             if (!isSelected)
             {
@@ -453,7 +476,100 @@ public partial class EditorWindow : Window
                 : new Thickness(1.5);
         }
 
+        if (persist)
+        {
+            _settings.EditorColorHex = _selectedColorHex;
+            _settingsService.Save(_settings);
+        }
+
         UpdateDrawingAttributes();
+    }
+
+    private static string NormalizeEditorColor(string? colorHex)
+    {
+        return TryNormalizeEditorColor(colorHex, out var normalizedColorHex)
+            ? normalizedColorHex
+            : "#FFFF4D6D";
+    }
+
+    private void InitializeCustomColorInput(string colorHex)
+    {
+        _suppressCustomColorTextChanged = true;
+        CustomColorTextBox.Text = IsFixedColor(colorHex) ? string.Empty : ToEditableHex(colorHex);
+        _suppressCustomColorTextChanged = false;
+        UpdateCustomColorChip(colorHex);
+    }
+
+    private void UpdateCustomColorChip(string colorHex)
+    {
+        if (ColorCustomButton is null || !TryNormalizeEditorColor(colorHex, out var normalizedColorHex))
+        {
+            return;
+        }
+
+        if (IsFixedColor(normalizedColorHex) && string.IsNullOrWhiteSpace(CustomColorTextBox.Text))
+        {
+            ColorCustomButton.Tag = normalizedColorHex;
+            ColorCustomButton.Background = Brushes.Transparent;
+            return;
+        }
+
+        ColorCustomButton.Tag = normalizedColorHex;
+        ColorCustomButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(normalizedColorHex));
+    }
+
+    private static bool IsFixedColor(string colorHex)
+    {
+        return colorHex.ToUpperInvariant() is
+            "#FF000000" or
+            "#FFFF4D6D" or
+            "#FFFFA000" or
+            "#FF00D26A" or
+            "#FFFFFFFF";
+    }
+
+    private static string ToEditableHex(string colorHex)
+    {
+        return colorHex.StartsWith("#FF", StringComparison.OrdinalIgnoreCase)
+            ? $"#{colorHex[3..]}"
+            : colorHex;
+    }
+
+    private static bool TryNormalizeEditorColor(string? colorHex, out string normalizedColorHex)
+    {
+        normalizedColorHex = "#FFFF4D6D";
+
+        if (string.IsNullOrWhiteSpace(colorHex))
+        {
+            return false;
+        }
+
+        var candidate = colorHex.Trim();
+        if (!candidate.StartsWith('#'))
+        {
+            candidate = $"#{candidate}";
+        }
+
+        if (candidate.Length == 7)
+        {
+            candidate = $"#FF{candidate[1..]}";
+        }
+
+        if (candidate.Length != 9)
+        {
+            return false;
+        }
+
+        for (var i = 1; i < candidate.Length; i++)
+        {
+            if (!Uri.IsHexDigit(candidate[i]))
+            {
+                return false;
+            }
+        }
+
+        normalizedColorHex = candidate.ToUpperInvariant();
+        return true;
     }
 
     private void UpdateDrawingAttributes()
